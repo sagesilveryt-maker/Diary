@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bubu & Dudu's Forever Diary 📅</title>
+    <style>
+        :root {
+            --bg: #fffaf0;
+            --dudu-brown: #5d4037;
+            --bubu-pink: #ffdae9;
+            --accent-yellow: #fff9c4;
+            --soft-white: #ffffff;
+        }
+
+        body { 
+            background-color: var(--bg); 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            color: var(--dudu-brown); 
+            text-align: center; 
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Header & Nav */
+        .header img { width: 100%; max-width: 250px; border-radius: 20px; margin-bottom: 10px; }
+        .month-nav { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 20px; 
+            margin: 15px 0;
+        }
+        .nav-btn {
+            background: var(--bubu-pink);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--dudu-brown);
+        }
+
+        /* Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+
+        .day-header { font-weight: bold; font-size: 0.8rem; opacity: 0.6; padding-bottom: 5px; }
+
+        .day-box {
+            background: var(--soft-white);
+            border: 2px solid var(--bubu-pink);
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .day-box.today { background: var(--accent-yellow); border-color: var(--dudu-brown); }
+        .day-box:hover { transform: scale(1.05); border-color: var(--dudu-brown); }
+        .empty-day { aspect-ratio: 1 / 1; }
+
+        /* Modal / Pop-up */
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(93, 64, 55, 0.4); backdrop-filter: blur(4px); z-index: 99; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 350px; background: var(--soft-white); padding: 25px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); z-index: 100; border: 3px solid var(--bubu-pink); }
+        
+        .char-toggle { display: flex; justify-content: space-around; margin: 15px 0; background: #fdf2f5; padding: 10px; border-radius: 20px; }
+        .char-btn { text-align: center; cursor: pointer; opacity: 0.4; transition: 0.3s; flex: 1; }
+        .char-btn.active { opacity: 1; }
+        .char-icon { width: 65px; height: 65px; object-fit: cover; border-radius: 50%; background: white; border: 2px solid transparent; }
+        .active .char-icon { border-color: var(--dudu-brown); transform: scale(1.1); }
+
+        textarea { width: 100%; height: 120px; border-radius: 15px; border: 2px solid var(--bubu-pink); padding: 12px; font-family: inherit; box-sizing: border-box; resize: none; outline: none; }
+        .save-btn { background: var(--bubu-pink); color: var(--dudu-brown); border: none; padding: 12px; border-radius: 50px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="dudu_gifts_setup.gif" alt="Bubu & Dudu">
+        <div class="month-nav">
+            <button class="nav-btn" onclick="changeMonth(-1)">❮</button>
+            <h2 id="current-month-display">Month Year</h2>
+            <button class="nav-btn" onclick="changeMonth(1)">❯</button>
+        </div>
+    </div>
+
+    <div class="calendar-grid">
+        <div class="day-header">Sun</div><div class="day-header">Mon</div><div class="day-header">Tue</div>
+        <div class="day-header">Wed</div><div class="day-header">Thu</div><div class="day-header">Fri</div><div class="day-header">Sat</div>
+    </div>
+    <div class="calendar-grid" id="calendar-body"></div>
+
+    <div class="overlay" id="overlay" onclick="closeModal()"></div>
+    <div class="modal" id="modal">
+        <h2 id="modal-date-display">Date</h2>
+        <div class="char-toggle">
+            <div class="char-btn active" id="dudu-tab" onclick="switchUser('dudu')">
+                <img src="dudu_avatar.png" class="char-icon"><br><b>Dudu</b>
+            </div>
+            <div class="char-btn" id="bubu-tab" onclick="switchUser('bubu')">
+                <img src="bubu_avatar.png" class="char-icon"><br><b>Bubu</b>
+            </div>
+        </div>
+        <textarea id="note-input" placeholder="Type a sweet note..."></textarea>
+        <button class="save-btn" onclick="saveNote()">Save Forever ❤️</button>
+    </div>
+
+    <script>
+        const FIREBASE_URL = "https://bubudududiary-ac774-default-rtdb.asia-southeast1.firebasedatabase.app/";
+        let date = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+        let viewYear = date.getFullYear();
+        let viewMonth = date.getMonth();
+        let selectedDay, currentUser = 'dudu';
+
+        function renderCalendar() {
+            const body = document.getElementById('calendar-body');
+            body.innerHTML = "";
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('current-month-display').innerText = `${monthNames[viewMonth]} ${viewYear}`;
+
+            let firstDay = new Date(viewYear, viewMonth, 1).getDay();
+            let daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                let empty = document.createElement('div');
+                empty.className = 'empty-day';
+                body.appendChild(empty);
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                let div = document.createElement('div');
+                div.className = 'day-box';
+                if(d === date.getDate() && viewMonth === date.getMonth() && viewYear === date.getFullYear()) div.classList.add('today');
+                div.innerText = d;
+                div.onclick = () => openModal(d);
+                body.appendChild(div);
+            }
+        }
+
+        function changeMonth(step) {
+            viewMonth += step;
+            if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+            else if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+            renderCalendar();
+        }
+
+        async function openModal(day) {
+            selectedDay = day;
+            document.getElementById('modal-date-display').innerText = `${day} ${document.getElementById('current-month-display').innerText}`;
+            document.getElementById('modal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            loadNote();
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; }
+
+        function switchUser(user) {
+            currentUser = user;
+            document.getElementById('dudu-tab').classList.toggle('active', user === 'dudu');
+            document.getElementById('bubu-tab').classList.toggle('active', user === 'bubu');
+            loadNote();
+        }
+
+        async function saveNote() {
+            const btn = document.querySelector('.save-btn');
+            const text = document.getElementById('note-input').value;
+            // Saves by Year/Month/Day
+            const url = `${FIREBASE_URL}/history/${viewYear}/${viewMonth + 1}/${selectedDay}/${currentUser}.json`;
+            btn.innerText = "Saving...";
+            await fetch(url, { method: 'PUT', body: JSON.stringify(text) });
+            btn.innerText = "Saved! ✨";
+            setTimeout(() => { btn.innerText = "Save Forever ❤️"; }, 1500);
+        }
+
+        async function loadNote() {
+            const input = document.getElementById('note-input');
+            input.value = "Loading...";
+            const url = `${FIREBASE_URL}/history/${viewYear}/${viewMonth + 1}/${selectedDay}/${currentUser}.json`;
+            const response = await fetch(url);
+            const data = await response.json();
+            input.value = data || "";
+        }
+
+        renderCalendar();
+    </script>
+</body>
+</html>
