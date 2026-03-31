@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Our Bubu & Dudu Diary 📅</title>
+    <style>
+        :root {
+            --bg: #fffaf0;
+            --dudu-brown: #5d4037;
+            --bubu-pink: #ffdae9;
+            --accent-yellow: #fff9c4;
+            --soft-white: #ffffff;
+        }
+
+        body { 
+            background-color: var(--bg); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color: var(--dudu-brown); 
+            text-align: center; 
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Header Styling */
+        .header img { width: 180px; border-radius: 20px; margin-bottom: 10px; }
+        h1 { font-size: 1.5rem; margin-bottom: 5px; color: var(--dudu-brown); }
+        p { font-size: 0.9rem; margin-bottom: 20px; opacity: 0.8; }
+
+        /* Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+
+        .day-box {
+            background: var(--soft-white);
+            border: 2px solid var(--bubu-pink);
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .day-box:hover { 
+            background: var(--accent-yellow); 
+            transform: scale(1.05);
+            border-color: var(--dudu-brown);
+        }
+
+        /* Modal / Pop-up Styling */
+        .overlay { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(93, 64, 55, 0.4); 
+            backdrop-filter: blur(3px);
+            z-index: 99; 
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%; max-width: 350px;
+            background: var(--soft-white);
+            padding: 25px;
+            border-radius: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            z-index: 100;
+            border: 3px solid var(--bubu-pink);
+        }
+
+        .modal h2 { margin-top: 0; font-size: 1.3rem; }
+
+        /* Toggle between Bubu and Dudu */
+        .char-toggle { 
+            display: flex; 
+            justify-content: space-around; 
+            margin: 20px 0; 
+            background: var(--bg);
+            padding: 10px;
+            border-radius: 15px;
+        }
+
+        .char-btn { 
+            text-align: center; 
+            cursor: pointer; 
+            opacity: 0.5; 
+            transition: 0.3s;
+            flex: 1;
+        }
+
+        .char-btn.active { opacity: 1; transform: scale(1.1); }
+
+        .char-icon { 
+            width: 60px; 
+            height: 60px; 
+            object-fit: contain;
+            border-radius: 50%; 
+            margin-bottom: 5px;
+            background: white;
+            border: 2px solid transparent;
+        }
+
+        .active .char-icon { border-color: var(--dudu-brown); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+
+        /* Text Input Area */
+        textarea { 
+            width: 100%; 
+            height: 120px; 
+            border-radius: 15px; 
+            border: 1px solid var(--bubu-pink); 
+            padding: 12px; 
+            font-family: inherit; 
+            font-size: 1rem;
+            background: #fffdf9;
+            box-sizing: border-box;
+            resize: none;
+            outline: none;
+        }
+
+        textarea:focus { border-color: var(--dudu-brown); }
+
+        .save-btn { 
+            background: var(--bubu-pink); 
+            color: var(--dudu-brown);
+            border: none; 
+            padding: 12px 25px; 
+            border-radius: 25px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            font-size: 1rem;
+            width: 100%;
+            transition: 0.2s;
+        }
+
+        .save-btn:active { transform: translateY(2px); background: #f48fb1; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="dudu_gifts_setup.png" alt="Bubu & Dudu Setup">
+        <h1>Our Digital Diary ✨</h1>
+        <p>A safe space for Bubu & Dudu's secrets.</p>
+    </div>
+
+    <div class="calendar-grid" id="calendar"></div>
+
+    <div class="overlay" id="overlay" onclick="closeModal()"></div>
+    <div class="modal" id="modal">
+        <h2 id="modal-date">Day X</h2>
+        
+        <div class="char-toggle">
+            <div class="char-btn active" id="dudu-tab" onclick="switchUser('dudu')">
+                <img src="dudu_avatar.gif" class="char-icon">
+                <div style="font-size: 0.8rem; font-weight: bold;">Dudu's Note</div>
+            </div>
+            <div class="char-btn" id="bubu-tab" onclick="switchUser('bubu')">
+                <img src="bubu_avatar.gif" class="char-icon">
+                <div style="font-size: 0.8rem; font-weight: bold;">Bubu's Note</div>
+            </div>
+        </div>
+
+        <textarea id="note-input" placeholder="Type a message for today..."></textarea>
+        <button class="save-btn" onclick="saveNote()">Save Forever ❤️</button>
+    </div>
+
+    <script>
+        const FIREBASE_URL = "https://bubudududiary-ac774-default-rtdb.asia-southeast1.firebasedatabase.app/";
+        let currentDay = null;
+        let currentUser = 'dudu';
+
+        // 1. Generate the 31 Days of the Month
+        const grid = document.getElementById('calendar');
+        for (let i = 1; i <= 31; i++) {
+            let div = document.createElement('div');
+            div.className = 'day-box';
+            div.innerText = i;
+            div.onclick = () => openModal(i);
+            grid.appendChild(div);
+        }
+
+        // 2. Open the diary entry for a specific day
+        async function openModal(day) {
+            currentDay = day;
+            document.getElementById('modal-date').innerText = "Day " + day + " of the Month";
+            document.getElementById('modal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            loadNote();
+        }
+
+        // 3. Close the modal
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        // 4. Switch between Dudu's and Bubu's view
+        function switchUser(user) {
+            currentUser = user;
+            document.getElementById('dudu-tab').classList.toggle('active', user === 'dudu');
+            document.getElementById('bubu-tab').classList.toggle('active', user === 'bubu');
+            loadNote();
+        }
+
+        // 5. Save the note to Firebase
+        async function saveNote() {
+            const text = document.getElementById('note-input').value;
+            const url = `${FIREBASE_URL}/days/${currentDay}/${currentUser}.json`;
+            try {
+                const response = await fetch(url, { 
+                    method: 'PUT', 
+                    body: JSON.stringify(text) 
+                });
+                if(response.ok) {
+                    alert("Saved successfully! ✨");
+                }
+            } catch (error) {
+                alert("Oops! Check your internet.");
+            }
+        }
+
+        // 6. Load the note from Firebase
+        async function loadNote() {
+            document.getElementById('note-input').value = "Loading...";
+            const url = `${FIREBASE_URL}/days/${currentDay}/${currentUser}.json`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById('note-input').value = data || "";
+            } catch (error) {
+                document.getElementById('note-input').value = "";
+            }
+        }
+    </script>
+</body>
+</html>
